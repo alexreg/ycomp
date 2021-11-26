@@ -4,12 +4,11 @@ import pandas as pd
 from click.exceptions import ClickException
 from typer import *
 
-from . import common, hg_cmd, snp_cmd, str_cmd, tree_cmd
+from . import common, snp_cmd, str_cmd, tree_cmd
 
 
 app = Typer(context_settings = {"help_option_names": ["-h", "--help"]})
 app.add_typer(tree_cmd.app)
-app.add_typer(hg_cmd.app)
 app.add_typer(snp_cmd.app)
 app.add_typer(str_cmd.app)
 
@@ -20,13 +19,6 @@ pd.options.mode.chained_assignment = None
 @tree_cmd.app.callback()
 def tree() -> None:
 	"""Work with haplogroup tree data."""
-	pass
-
-
-@hg_cmd.app.callback()
-def hg() -> None:
-	"""Work with haplogroup data."""
-
 	pass
 
 
