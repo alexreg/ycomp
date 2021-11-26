@@ -174,7 +174,7 @@ def fetch_ftdna(
 	kits_df.index = kits_df.index.astype("str")
 
 	# Clean data.
-	kits_df["Haplogroup"].replace(["-"], None, inplace = True)
+	kits_df["Short Hand"].replace(["-"], None, inplace = True)
 
 	def expand_row(row: Any) -> pd.Series:
 		def get_snp_value(call: str) -> Optional[Tuple[str, bool]]:
