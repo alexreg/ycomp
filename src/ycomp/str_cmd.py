@@ -117,8 +117,8 @@ def add_yfull(
 
 @app.command()
 def fetch_ftdna(
-	ftdna_group: str = Option(..., "--group", "-g", "The name of the FTDNA group to fetch kits from."),
-	page_size: int = Option(500, "--page-size", "-p", "The page size to use when fetching kits."),
+	ftdna_group: str = Option(..., "--group", "-g", help = "The name of the FTDNA group to fetch kits from."),
+	page_size: int = Option(500, "--page-size", "-p", help = "The page size to use when fetching kits."),
 ) -> None:
 	"""Fetch kit STR data from FTDNA and store it in the database."""
 
