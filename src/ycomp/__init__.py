@@ -7,7 +7,11 @@ from typer import *
 from . import common, snp_cmd, str_cmd, tree_cmd
 
 
-app = Typer(context_settings = {"help_option_names": ["-h", "--help"]})
+app = Typer(
+	context_settings = {
+		"help_option_names": ["-h", "--help"],
+	},
+)
 app.add_typer(tree_cmd.app)
 app.add_typer(snp_cmd.app)
 app.add_typer(str_cmd.app)
