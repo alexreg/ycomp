@@ -16,13 +16,13 @@ app.add_typer(tree_cmd.app)
 app.add_typer(snp_cmd.app)
 app.add_typer(str_cmd.app)
 
-
 pd.options.mode.chained_assignment = None
 
 
 @tree_cmd.app.callback()
 def tree() -> None:
 	"""Work with haplogroup tree data."""
+
 	pass
 
 
@@ -41,8 +41,6 @@ def str_() -> None:
 
 
 def main() -> int:
-	import sys
-
 	import typer
 
 	try:
