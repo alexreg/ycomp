@@ -31,7 +31,7 @@ To get started, you probably want to do something like the following.
 2.	Download one or more (sub)trees from YFull for the haplogroups that you are interested in.
 
 	```sh
-	ycomp yfull download -hg [haplogroup]
+	ycomp tree download-yfull --hg [haplogroup]
 	```
 
 	Use the haplogroup name that appears on the Yfull website.
