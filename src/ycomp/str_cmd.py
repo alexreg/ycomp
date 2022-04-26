@@ -35,7 +35,7 @@ def get_yfull_df(data: Union[IO, PathLike]) -> pd.DataFrame:
 
 	# Split combined loci values into two columns.
 	value_split_df: pd.DataFrame = df[1].str.split(".", 1, expand = True)
-	df[1] = value_split_df[0].astype("Int32")
+	df[1] = value_split_df[0].replace(["?", "n/a"], pd.NA).astype("Int32")
 	df[2] = df[2].apply(lambda confidence: confidence_to_bool(confidence)).astype("bool")
 	df[3] = value_split_df[1].fillna(value = np.nan)
 	df = df.reindex([1, 3, 2], axis = 1)

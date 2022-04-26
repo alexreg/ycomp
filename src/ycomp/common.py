@@ -74,7 +74,7 @@ def merge_db(path: PathLike, new_df: pd.DataFrame) -> None:
 		df = new_df
 	else:
 		# Add new rows, removing old duplicates.
-		df = df.append(new_df)
+		df = pd.concat([df, new_df], axis = 0)
 		df = df[~df.index.duplicated(keep = "last")]
 
 	store_db(path, df)

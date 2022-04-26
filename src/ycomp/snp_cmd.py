@@ -32,7 +32,7 @@ def get_irrelevant_snps(tree_df: pd.DataFrame, max_age = int) -> Set[str]:
 
 
 def get_yfull_df(data: Union[IO, PathLike]) -> Tuple[Optional[str], List[str], pd.DataFrame]:
-	df: pd.DataFrame = pd.read_csv(data, sep = ";", index_col = 0, header = None, names = [0, 1, 2, 3])
+	df: pd.DataFrame = pd.read_csv(data, sep = ";", index_col = 0, header = None, names = [0, 1, 2, 3, 4])
 	info_df: pd.DataFrame = df.iloc[: 3, : 1]
 	snps_df: pd.DataFrame = df.iloc[3 :]
 
