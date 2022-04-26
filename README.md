@@ -39,7 +39,8 @@ To get started, you probably want to do something like the following.
 3.	Download and import SNP and STR kit data from FTDNA for the haplogroups that you are interested in.
 	
 	```sh
-	ycomp snp download-ftdna [group_name]
+	ycomp snp fetch-ftdna [group_name]
+	ycomp str fetch-ftdna [group_name]
 	```
 
 	The group name may be the name as it appears on the FTDNA website (with spaces) or in the URL (with spaces replaced by hyphens).
