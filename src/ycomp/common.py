@@ -1,4 +1,5 @@
 import os
+from enum import Enum, auto
 from itertools import takewhile
 from os import PathLike
 from typing import *
@@ -18,6 +19,17 @@ tree_path = "ycomp-yfull-tree.parquet"
 snps_path = "ycomp-snps.parquet"
 kits_snp_path = "ycomp-kits-snp.parquet"
 kits_str_path = "ycomp-kits-str.parquet"
+
+
+class DownloadFtdnaError(Exception, Enum):
+	UNKNOWN_PAGE_LAYOUT = auto()
+	NOT_GROUP_MEMBER = auto()
+
+	def __str__(self) -> str:
+		if self == self.UNKNOWN_PAGE_LAYOUT:
+			return "Unknown page layout"
+		elif self == self.NOT_GROUP_MEMBER:
+			return "Not group member"
 
 
 def _match_class(context, arg: str) -> bool:
@@ -117,18 +129,20 @@ def include_kit(tree_df: pd.DataFrame, a_lineage: Sequence[str], b: pd.Series, *
 
 
 def download_ftdna_kits(url: str, *, page_size: int = 500, http_timeout: float) -> pd.DataFrame:
+
 	def id_to_form_input_name(id: str) -> str:
 		return "ctl00$" + id.replace("_", "$")
 
 	kits_df: pd.DataFrame = None
 
 	prelim: bool = True
+	pagination: bool = True
 	page: int = 1
 	data: Dict[str, str] = {}
 	gridview_input_name: str
 	page_size_input_name: str
 
-	echo(f"Begun fetching kit data from <{url}>.")
+	echo(f"Begun fetching kit data from <{url}> (page size = {page_size}).")
 
 	from lxml.html import HtmlElement
 
@@ -145,12 +159,24 @@ def download_ftdna_kits(url: str, *, page_size: int = 500, http_timeout: float) 
 			break
 
 		html: HtmlElement = lxml.html.document_fromstring(response.text)
-		form: HtmlElement = html.cssselect("form#form1")[0]
-		gridview_div: HtmlElement = form.cssselect("div.AspNet-GridView")[0]
-		table: HtmlElement = gridview_div.cssselect("table")[0]
+
+		if first(html.cssselect("div#MainContent_pnlHiddenYResults")) is not None:
+			raise DownloadFtdnaError.NOT_GROUP_MEMBER
+
+		form: HtmlElement = first(html.cssselect("form#form1"))
+		if form is None:
+			raise DownloadFtdnaError.UNKNOWN_PAGE_LAYOUT
+
+		gridview_div: HtmlElement = first(form.cssselect("div.AspNet-GridView"))
+		if gridview_div is None:
+			raise DownloadFtdnaError.UNKNOWN_PAGE_LAYOUT
+
+		table: HtmlElement = first(gridview_div.cssselect("table"))
+		if table is None:
+			raise DownloadFtdnaError.UNKNOWN_PAGE_LAYOUT
 
 		if prelim:
-			page_size_input: HtmlElement = form.cssselect("input[id *= 'tbPageSize']")[0]
+			page_size_input: HtmlElement = first(form.cssselect("input[id *= 'tbPageSize']"))
 			page_size_input_name = page_size_input.get("name")
 
 			if int(page_size_input.get("value", 0)) == page_size:
@@ -164,11 +190,14 @@ def download_ftdna_kits(url: str, *, page_size: int = 500, http_timeout: float) 
 
 				continue
 
+		# Check if pagination is active.
+		pagination = len(form.cssselect("div.AspNet-GridView-Pagination")) > 0
+
 		gridview_input_name = id_to_form_input_name(gridview_div.get("id"))
 
 		echo(f"Processing page {page}...")
 
-		page_df = pd.read_html(lxml.html.tostring(table))[0]
+		page_df = first(pd.read_html(lxml.html.tostring(table)))
 
 		if page > 1:
 			# Drop header row of table.
@@ -177,13 +206,16 @@ def download_ftdna_kits(url: str, *, page_size: int = 500, http_timeout: float) 
 		if kits_df is None:
 			kits_df = page_df
 		else:
-			kits_df = kits_df.append(page_df)
+			kits_df = pd.concat([kits_df, page_df], axis = 0)
 
-		# Prepare request for next page.
-		page += 1
-		data = dict(form.fields)
-		data["__EVENTTARGET"] = gridview_input_name
-		data["__EVENTARGUMENT"] = f"Page${page}"
+		if pagination:
+			# Prepare request for next page.
+			page += 1
+			data = dict(form.fields)
+			data["__EVENTTARGET"] = gridview_input_name
+			data["__EVENTARGUMENT"] = f"Page${page}"
+		else:
+			break
 
 	echo(f"Finished fetching kits from <{url}>.")
 

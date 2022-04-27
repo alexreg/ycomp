@@ -161,20 +161,39 @@ def fetch_ftdna(
 	"""Fetch kit SNP data from FTDNA and store it in the database."""
 
 	try:
-		url = ftdna_url_template.format(urllib.parse.quote(ftdna_group.replace(" ", "-")))
+		url = ftdna_url_template.format(urllib.parse.quote(ftdna_group))
 		kits_df = download_ftdna_kits(url, page_size = page_size, http_timeout = 15 + 0.2 * page_size)
+	except DownloadFtdnaError as e:
+		secho(f"ERROR: {e}", fg = colors.RED, err = True)
+		raise Exit(1)
 	except (requests.ConnectionError, requests.Timeout) as e:
 		secho(f"ERROR: HTTP request failed: {e}", fg = colors.RED, err = True)
 		raise Exit(1)
 
 	echo(f"Begun processing kits from FTDNA.")
 
-	# TODO: Do `astype` on all info columns wen https://github.com/pandas-dev/pandas/issues/44156 is fixed.
+	# Clean data.
+	kits_df.rename(columns = {"Short Hand": "Haplogroup"}, inplace = True)
+	kits_df["Haplogroup"].replace(["-"], None, inplace = True)
+
+	if "Last Name" in kits_df.columns:
+		if "Paternal Ancestor Name" not in kits_df.columns:
+			kits_df.rename(columns = {"Last Name": "Paternal Ancestor Name"}, inplace = True)
+		else:
+			kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].fillna(kits_df["Last Name"])
+			kits_df.drop("Last Name", axis = 1, inplace = True)
+
+	if "Name" in kits_df.columns:
+		if "Paternal Ancestor Name" not in kits_df.columns:
+			kits_df.rename(columns = {"Name": "Paternal Ancestor Name"}, inplace = True)
+		else:
+			kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].fillna(kits_df["Name"])
+			kits_df.drop("Name", axis = 1, inplace = True)
+
 	kits_df.set_index("Kit Number", inplace = True)
 	kits_df.index = kits_df.index.astype("str")
-
-	# Clean data.
-	kits_df["Short Hand"].replace(["-"], None, inplace = True)
+	kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].astype("str")
+	kits_df["Haplogroup"] = kits_df["Haplogroup"].astype("str")
 
 	def expand_row(row: Any) -> pd.Series:
 		def get_snp_value(call: str) -> Optional[Tuple[str, bool]]:
@@ -204,7 +223,7 @@ def fetch_ftdna(
 			pd.Series(np.nan, index = kits_df.index, dtype = "str", name = "Group"),
 			kits_df["Paternal Ancestor Name"],
 			pd.Series(np.nan, index = kits_df.index, dtype = "str", name = "Country"),
-			kits_df["Short Hand"].rename("Haplogroup"),
+			kits_df["Haplogroup"],
 			expanded_rows,
 		],
 		axis = 1,
