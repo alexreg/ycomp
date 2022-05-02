@@ -128,8 +128,7 @@ def include_kit(tree_df: pd.DataFrame, a_lineage: Sequence[str], b: pd.Series, *
 	return True
 
 
-def download_ftdna_kits(url: str, *, page_size: int = 500, http_timeout: float) -> pd.DataFrame:
-
+def ftdna_fetch_kits(url: str, *, page_size: int = 500, http_timeout: float) -> pd.DataFrame:
 	def id_to_form_input_name(id: str) -> str:
 		return "ctl00$" + id.replace("_", "$")
 
@@ -141,8 +140,9 @@ def download_ftdna_kits(url: str, *, page_size: int = 500, http_timeout: float) 
 	data: Dict[str, str] = {}
 	gridview_input_name: str
 	page_size_input_name: str
+	page_df = None
 
-	echo(f"Begun fetching kit data from <{url}> (page size = {page_size}).")
+	echo(f"Begun fetching kit data from <{url}> (page size: {page_size}).")
 
 	from lxml.html import HtmlElement
 
@@ -197,25 +197,30 @@ def download_ftdna_kits(url: str, *, page_size: int = 500, http_timeout: float) 
 
 		echo(f"Processing page {page}...")
 
+		prev_page_df = page_df
 		page_df = first(pd.read_html(lxml.html.tostring(table)))
 
 		if page > 1:
 			# Drop header row of table.
 			page_df.drop(page_df.index[0], inplace = True)
 
+		# Check if data frame is same as last
+		if prev_page_df is not None and page_df.equals(prev_page_df):
+			break
+
 		if kits_df is None:
 			kits_df = page_df
 		else:
 			kits_df = pd.concat([kits_df, page_df], axis = 0)
 
-		if pagination:
-			# Prepare request for next page.
-			page += 1
-			data = dict(form.fields)
-			data["__EVENTTARGET"] = gridview_input_name
-			data["__EVENTARGUMENT"] = f"Page${page}"
-		else:
+		if not pagination:
 			break
+
+		# Prepare request for next page.
+		page += 1
+		data = dict(form.fields)
+		data["__EVENTTARGET"] = gridview_input_name
+		data["__EVENTARGUMENT"] = f"Page${page}"
 
 	echo(f"Finished fetching kits from <{url}>.")
 

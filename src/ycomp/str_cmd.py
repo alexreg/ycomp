@@ -124,7 +124,7 @@ def fetch_ftdna(
 
 	try:
 		url = ftdna_url_template.format(urllib.parse.quote(ftdna_group))
-		kits_df = download_ftdna_kits(url, page_size = page_size, http_timeout = 15 + 0.05 * page_size)
+		kits_df = ftdna_fetch_kits(url, page_size = page_size, http_timeout = 15 + 0.05 * page_size)
 	except DownloadFtdnaError as e:
 		secho(f"ERROR: {e}", fg = colors.RED, err = True)
 		raise Exit(1)
