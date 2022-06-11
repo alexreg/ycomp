@@ -3,11 +3,8 @@ import urllib.parse
 from decimal import Decimal
 from typing import *
 
-import lxml
-import lxml.html
 import numpy as np
 import pandas as pd
-import requests
 from typer import *
 
 from .common import *
@@ -28,33 +25,20 @@ def download_yfull(
 ) -> None:
 	"""Download a subtree of the Y-haplogroup tree on YFull, and store it."""
 
-	try:
-		echo(f"Begun downloading YFull tree.")
+	browser = StatefulBrowser()
 
-		url = yfull_tree_url_template.format(urllib.parse.quote(haplogroup))
-		response = requests.get(url, timeout = 60)
-
-		if response.status_code == requests.codes.not_found:
-			secho(f"Haplogroup {haplogroup} not found in YFull tree.", fg = colors.RED, err = True)
-			raise Exit(1)
-
-		response.raise_for_status()
-
-		echo(f"Finished downloading YFull tree.")
-
-		if response.status_code != requests.codes.ok:
-			secho(f"Page not found (HTTP {response.status_code}); finishing...", fg = colors.RED, err = True)
-			raise Exit(1)
-	except (requests.ConnectionError, requests.Timeout) as e:
-		secho(f"ERROR: HTTP request failed: {e}", fg = colors.RED, err = True)
+	url = yfull_tree_url_template.format(urllib.parse.quote(haplogroup))
+	echo(f"Downloading YFull tree from <{url}>...")
+	response = browser.open(url, timeout = 60)
+	if not response.ok:
+		secho(f"Haplogroup {haplogroup} not found in YFull tree.", fg = colors.RED, err = True)
 		raise Exit(1)
 
-	echo(f"Begun processing YFull tree.")
+	echo(f"Finished downloading YFull tree.")
 
-	from lxml.html import HtmlElement
+	echo(f"Processing YFull tree...")
 
-	html: HtmlElement = lxml.html.document_fromstring(response.text)
-	tree_ul: HtmlElement = html.xpath("//ul[@id = 'tree']")[0]
+	tree_ul: Tag = browser.page.select_one("ul#tree")
 
 	found_snps: list[Tuple[str, str]] = []
 
@@ -81,24 +65,24 @@ def download_yfull(
 
 		return all_snps_list
 
-	def traverse_tree(tree_ul: HtmlElement, parent_haplogroup: Optional[str] = None) -> Iterable[pd.Series]:
-		item_li_list: list[HtmlElement] = tree_ul.xpath("li")
+	def traverse_tree(tree_ul: Tag, parent_haplogroup: Optional[str] = None) -> Iterable[pd.Series]:
+		item_li_list: list[Tag] = tree_ul.select(":scope > li")
 		for item_li in item_li_list:
-			haplogroup_a: HtmlElement = first(item_li.xpath("a[1]"))
+			haplogroup_a: Tag = item_li.select_one(":scope > a")
 			if haplogroup_a is None:
 				continue
 
-			snp_span: HtmlElement = first(item_li.xpath("span[css:class('yf-snpforhg')]"))
-			plus_snp_span: HtmlElement = first(item_li.xpath("span[css:class('yf-plus-snps')]"))
-			age_span: HtmlElement = first(item_li.xpath("span[css:class('yf-age')]"))
-			inner_ul: HtmlElement = first(item_li.xpath("ul[1]"))
+			snp_span: Tag = item_li.select_one(":scope > span.yf-snpforhg")
+			plus_snp_span: Tag = item_li.select_one(":scope > span.yf-plus-snps")
+			age_span: Tag = item_li.select_one(":scope > span.yf-age")
+			inner_ul: Tag = item_li.select_one(":scope > ul")
 
-			haplogroup = haplogroup_a.text_content()
+			haplogroup = haplogroup_a.text
 
-			primary_snps = snps_to_list(snp_span.text_content())
+			primary_snps = snps_to_list(snp_span.text)
 
 			if plus_snp_span is not None:
-				extra_snps = snps_to_list(plus_snp_span.attrib["title"])
+				extra_snps = snps_to_list(plus_snp_span["title"])
 			else:
 				extra_snps = []
 
@@ -111,7 +95,7 @@ def download_yfull(
 			tmrca_min = None
 			tmrca_max = None
 			if age_span is not None:
-				age_text = age_span.text_content()
+				age_text = age_span.text
 				age_match = age_pattern.fullmatch(age_text)
 				if age_match:
 					age = int(age_match.group("age"))
@@ -119,7 +103,7 @@ def download_yfull(
 				else:
 					secho(f"WARNING: unexpected format of text for haplogroup age: '{age_text}'", fg = colors.YELLOW, err = True)
 
-				age_bounds_text = age_span.attrib["title"]
+				age_bounds_text = age_span["title"]
 				age_bounds_match = age_bounds_pattern.fullmatch(age_bounds_text)
 				if age_bounds_match:
 					age_cl = Decimal(int(age_bounds_match.group("age_cl"))) / 100

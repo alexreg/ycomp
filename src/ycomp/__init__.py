@@ -4,7 +4,7 @@ import pandas as pd
 from click.exceptions import ClickException
 from typer import *
 
-from . import common, snp_cmd, str_cmd, tree_cmd
+from . import common, ftdna_cmd, snp_cmd, str_cmd, tree_cmd
 
 
 app = Typer(
@@ -12,11 +12,19 @@ app = Typer(
 		"help_option_names": ["-h", "--help"],
 	},
 )
+app.add_typer(ftdna_cmd.app)
 app.add_typer(tree_cmd.app)
 app.add_typer(snp_cmd.app)
 app.add_typer(str_cmd.app)
 
 pd.options.mode.chained_assignment = None
+
+
+@ftdna_cmd.app.callback()
+def ftdna() -> None:
+	"""Work with FTDNA accounts."""
+
+	pass
 
 
 @tree_cmd.app.callback()
@@ -41,9 +49,14 @@ def str_() -> None:
 
 
 def main() -> int:
+	import logging
+	import os
+
 	import typer
 
 	try:
+		logging.basicConfig(level = os.environ.get("LOGLEVEL", "WARNING").upper())
+
 		command = typer.main.get_command(app)
 		result = command(standalone_mode = False)
 		return result

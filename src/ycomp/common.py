@@ -1,19 +1,25 @@
+import importlib.metadata
 import os
+import shelve
+from datetime import datetime, timezone
 from enum import Enum, auto
 from itertools import takewhile
 from os import PathLike
+from pathlib import Path
 from typing import *
 
-import lxml
-import lxml.etree
-import lxml.html
 import pandas as pd
-import requests
+from bs4 import NavigableString, Tag
+from mechanicalsoup import Form, StatefulBrowser
+from platformdirs import PlatformDirs
 from typer import *
 
 
 T = TypeVar("T")
 NDFrameT = TypeVar("NDFrameT", bound = pd.core.generic.NDFrame)
+
+package = importlib.metadata.metadata(__package__)
+platform_dirs = PlatformDirs(appname = package["Name"], version = package["Version"])
 
 tree_path = "ycomp-yfull-tree.parquet"
 snps_path = "ycomp-snps.parquet"
@@ -22,23 +28,25 @@ kits_str_path = "ycomp-kits-str.parquet"
 
 
 class DownloadFtdnaError(Exception, Enum):
-	UNKNOWN_PAGE_LAYOUT = auto()
+	NOT_FOUND = auto()
 	NOT_GROUP_MEMBER = auto()
+	UNKNOWN_PAGE_LAYOUT = auto()
 
 	def __str__(self) -> str:
-		if self == self.UNKNOWN_PAGE_LAYOUT:
-			return "Unknown page layout"
+		if self == self.NOT_FOUND:
+			return "Group not found"
 		elif self == self.NOT_GROUP_MEMBER:
-			return "Not group member"
-
-
-def _match_class(context, arg: str) -> bool:
-	context_node = cast(lxml.html.HtmlElement, context.context_node)
-	return arg in context_node.classes
+			return "Not group member or not signed in"
+		elif self == self.UNKNOWN_PAGE_LAYOUT:
+			return "Unknown page layout"
 
 
 def first(seq: Sequence[T]) -> Optional[T]:
 	return seq[0] if len(seq) > 0 else None
+
+
+def utc_to_local(utc_dt: datetime) -> datetime:
+	return utc_dt.replace(tzinfo = timezone.utc).astimezone(tz = None)
 
 
 def float_not(a: NDFrameT) -> NDFrameT:
@@ -128,83 +136,105 @@ def include_kit(tree_df: pd.DataFrame, a_lineage: Sequence[str], b: pd.Series, *
 	return True
 
 
-def ftdna_fetch_kits(url: str, *, page_size: int = 500, http_timeout: float) -> pd.DataFrame:
+def get_cache_dir() -> Path:
+	path = Path(platform_dirs.user_cache_dir)
+	path.mkdir(parents = True, exist_ok = True)
+	return path
+
+
+def open_ftdna_login_cache():
+	return shelve.open(str(get_cache_dir() / "ftdna-login"))
+
+
+def ftdna_fetch_kits(url: str, *, page_size: Optional[int] = None, http_timeout: Optional[float] = None) -> pd.DataFrame:
 	def id_to_form_input_name(id: str) -> str:
 		return "ctl00$" + id.replace("_", "$")
 
 	kits_df: pd.DataFrame = None
 
 	prelim: bool = True
-	pagination: bool = True
-	page: int = 1
-	data: Dict[str, str] = {}
 	gridview_input_name: str
 	page_size_input_name: str
 	page_df = None
 
-	echo(f"Begun fetching kit data from <{url}> (page size: {page_size}).")
+	browser = StatefulBrowser()
 
-	from lxml.html import HtmlElement
+	# Configure cookies for requests.
+	cookie_jar = browser.get_cookiejar()
+	with open_ftdna_login_cache() as shelf:
+		cookies = shelf.get("cookies", ())
+		for cookie in cookies:
+			cookie_jar.set(cookie["name"], cookie["value"], domain = cookie.get("domain"), path = cookie.get("path"))
+
+	echo(f"Fetching kits from <{url}>...")
+	response = browser.open(url, timeout = http_timeout)
+	if not response.ok or response.url == "https://www.familytreedna.com/":
+		raise DownloadFtdnaError.NOT_FOUND
 
 	while True:
-		if prelim:
-			echo(f"Fetching page {page} (preliminary)...")
-		else:
-			echo(f"Fetching page {page}...")
-
-		response = requests.post(url, data, timeout = http_timeout)
-
-		if response.status_code != requests.codes.ok:
-			echo(f"Page not found (HTTP {response.status_code}); finishing...")
-			break
-
-		html: HtmlElement = lxml.html.document_fromstring(response.text)
-
-		if first(html.cssselect("div#MainContent_pnlHiddenYResults")) is not None:
+		if browser.page.select_one("div#MainContent_pnlHiddenYResults") is not None:
 			raise DownloadFtdnaError.NOT_GROUP_MEMBER
 
-		form: HtmlElement = first(html.cssselect("form#form1"))
+		form: Form = browser.select_form("form#form1")
 		if form is None:
 			raise DownloadFtdnaError.UNKNOWN_PAGE_LAYOUT
 
-		gridview_div: HtmlElement = first(form.cssselect("div.AspNet-GridView"))
+		form_tag: Tag = form.form
+
+		gridview_div: Tag = form_tag.select_one("div.AspNet-GridView")
 		if gridview_div is None:
 			raise DownloadFtdnaError.UNKNOWN_PAGE_LAYOUT
 
-		table: HtmlElement = first(gridview_div.cssselect("table"))
+		table = gridview_div.select_one("table")
 		if table is None:
 			raise DownloadFtdnaError.UNKNOWN_PAGE_LAYOUT
 
 		if prelim:
-			page_size_input: HtmlElement = first(form.cssselect("input[id *= 'tbPageSize']"))
+			page_size_input: Tag = form_tag.select_one("input[id *= 'tbPageSize']")
 			page_size_input_name = page_size_input.get("name")
 
-			if int(page_size_input.get("value", 0)) == page_size:
+			if page_size is None or int(page_size_input.get("value", 0)) == page_size:
 				prelim = False
 			else:
-				# Prepare request to update page size.
-				page_size_input.set("value", str(page_size))
-				data = dict(form.fields)
-				data["__EVENTTARGET"] = page_size_input_name
-				data["__EVENTARGUMENT"] = ""
+				# Submit request to update page size.
+				browser[page_size_input_name] = str(page_size)
+				echo(f"Updating page size to {page_size}...")
+				browser.submit_selected(
+					data = {
+						"__EVENTTARGET": page_size_input_name,
+						"__EVENTARGUMENT": "",
+					},
+					timeout = http_timeout,
+				)
 
 				continue
 
-		# Check if pagination is active.
-		pagination = len(form.cssselect("div.AspNet-GridView-Pagination")) > 0
+		# Extract current and maximum page numbers.
+		page = 1
+		max_page = 1
+		pagination_div: Tag = form_tag.select_one("div.AspNet-GridView-Pagination")
+		if pagination_div:
+			for child in pagination_div.children:
+				if isinstance(child, Tag):
+					if child.name.casefold() == "span":
+						page = int(child.text.strip())
+				elif isinstance(child, NavigableString):
+					of_prefix = " of "
+					if child.text.startswith(of_prefix):
+						max_page = int(child.removeprefix(of_prefix).strip())
 
 		gridview_input_name = id_to_form_input_name(gridview_div.get("id"))
 
-		echo(f"Processing page {page}...")
+		echo(f"Processing page {page} of {max_page}...")
 
 		prev_page_df = page_df
-		page_df = first(pd.read_html(lxml.html.tostring(table)))
+		page_df = first(pd.read_html(str(table)))
 
 		if page > 1:
 			# Drop header row of table.
 			page_df.drop(page_df.index[0], inplace = True)
 
-		# Check if data frame is same as last
+		# Check if data frame is same as last.
 		if prev_page_df is not None and page_df.equals(prev_page_df):
 			break
 
@@ -213,20 +243,21 @@ def ftdna_fetch_kits(url: str, *, page_size: int = 500, http_timeout: float) -> 
 		else:
 			kits_df = pd.concat([kits_df, page_df], axis = 0)
 
-		if not pagination:
+		# Check if there are any more pages remaining to fetch.
+		if page == max_page:
 			break
 
-		# Prepare request for next page.
-		page += 1
-		data = dict(form.fields)
-		data["__EVENTTARGET"] = gridview_input_name
-		data["__EVENTARGUMENT"] = f"Page${page}"
+		# Submit request for next page.
+		next_page = page + 1
+		echo(f"Fetching page {next_page}...")
+		browser.submit_selected(
+			data = {
+				"__EVENTTARGET": gridview_input_name,
+				"__EVENTARGUMENT": f"Page${next_page}",
+			},
+			timeout = http_timeout,
+		)
 
-	echo(f"Finished fetching kits from <{url}>.")
+	echo(f"Finished fetching kits.")
 
 	return kits_df
-
-
-ns = lxml.etree.FunctionNamespace("http://noldorin.com/xmlns/xpath/css")
-ns.prefix = "css"
-ns["class"] = _match_class

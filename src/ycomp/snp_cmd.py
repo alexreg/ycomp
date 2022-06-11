@@ -164,13 +164,13 @@ def fetch_ftdna(
 		url = ftdna_url_template.format(urllib.parse.quote(ftdna_group))
 		kits_df = ftdna_fetch_kits(url, page_size = page_size, http_timeout = 15 + 0.2 * page_size)
 	except DownloadFtdnaError as e:
+		if debug_mode():
+			raise
+
 		secho(f"ERROR: {e}", fg = colors.RED, err = True)
 		raise Exit(1)
-	except (requests.ConnectionError, requests.Timeout) as e:
-		secho(f"ERROR: HTTP request failed: {e}", fg = colors.RED, err = True)
-		raise Exit(1)
 
-	echo(f"Begun processing kits from FTDNA.")
+	echo(f"Processing kits from FTDNA...")
 
 	# Clean data.
 	kits_df.rename(columns = {"Short Hand": "Haplogroup"}, inplace = True)
