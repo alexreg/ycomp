@@ -17,7 +17,7 @@ app = Typer()
 
 yfull_tree_url_template = "https://www.yfull.com/tree/{0}/"
 
-snp_name_pattern = re.compile(r"(?P<name>[A-Z0-9+.=]+)(?P<info>\([A-Z]+\))?")
+snp_name_pattern = re.compile(r"(?P<name>[A-Z0-9+.=]+)(?P<info>!|\([A-Z]+\))?")
 age_pattern = re.compile(r"formed (?P<age>\d+) ybp, TMRCA (?P<tmrca>\d+) ybp")
 age_bounds_pattern = re.compile(r"formed CI (?P<age_cl>\d+)% (?P<age_min>\d+)<->(?P<age_max>\d+) ybp, TMRCA CI (?P<tmrca_cl>\d+)% (?P<tmrca_min>\d+)<->(?P<tmrca_max>\d+) ybp")
 
@@ -47,7 +47,7 @@ def download_yfull(
 
 	def snps_to_list(snps: str) -> List[str]:
 		def clean_snp(snp: str) -> str:
-			match = snp_name_pattern.fullmatch(snp.strip())
+			match = snp_name_pattern.fullmatch(snp.upper().strip())
 
 			if match:
 				return match.group("name")
