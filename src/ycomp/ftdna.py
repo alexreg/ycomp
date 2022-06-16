@@ -147,3 +147,19 @@ def ftdna_fetch_kits(url: str, *, page_size: Optional[int] = None, http_timeout:
 	echo(f"Finished fetching kits.")
 
 	return kits_df
+
+
+def ftdna_normalize_columns(kits_df: pd.DataFrame):
+	if "Last Name" in kits_df.columns:
+		if "Paternal Ancestor Name" not in kits_df.columns:
+			kits_df.rename(columns = {"Last Name": "Paternal Ancestor Name"}, inplace = True)
+		else:
+			kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].fillna(kits_df["Last Name"])
+			kits_df.drop("Last Name", axis = 1, inplace = True)
+
+	if "Name" in kits_df.columns:
+		if "Paternal Ancestor Name" not in kits_df.columns:
+			kits_df.rename(columns = {"Name": "Paternal Ancestor Name"}, inplace = True)
+		else:
+			kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].fillna(kits_df["Name"])
+			kits_df.drop("Name", axis = 1, inplace = True)

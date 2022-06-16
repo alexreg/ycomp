@@ -178,23 +178,14 @@ def fetch_ftdna(
 	kits_df.rename(columns = {"Short Hand": "Haplogroup"}, inplace = True)
 	kits_df["Haplogroup"].replace(["-"], None, inplace = True)
 
-	if "Last Name" in kits_df.columns:
-		if "Paternal Ancestor Name" not in kits_df.columns:
-			kits_df.rename(columns = {"Last Name": "Paternal Ancestor Name"}, inplace = True)
-		else:
-			kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].fillna(kits_df["Last Name"])
-			kits_df.drop("Last Name", axis = 1, inplace = True)
-
-	if "Name" in kits_df.columns:
-		if "Paternal Ancestor Name" not in kits_df.columns:
-			kits_df.rename(columns = {"Name": "Paternal Ancestor Name"}, inplace = True)
-		else:
-			kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].fillna(kits_df["Name"])
-			kits_df.drop("Name", axis = 1, inplace = True)
+	ftdna_normalize_columns(kits_df)
 
 	kits_df.set_index("Kit Number", inplace = True)
 	kits_df.index = kits_df.index.astype("str")
-	kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].astype("str")
+	if "Paternal Ancestor Name" in kits_df:
+		kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].astype("str")
+	else:
+		kits_df["Paternal Ancestor Name"] = pd.Series(np.nan, index = kits_df.index, dtype = "str")
 	kits_df["Haplogroup"] = kits_df["Haplogroup"].astype("str")
 
 	def expand_row(row: Any) -> pd.Series:
