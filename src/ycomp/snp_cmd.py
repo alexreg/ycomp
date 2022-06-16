@@ -10,6 +10,8 @@ import pandas as pd
 from typer import *
 
 from .common import *
+from .db import *
+from .ftdna import *
 
 
 app = Typer()
@@ -298,7 +300,7 @@ def analyze(
 	self_kit_hg = kits_df.loc[self_kit, "Haplogroup"]
 	self_kit_lineage = get_haplogroup_lineage(tree_df, self_kit_hg)
 
-	kits_df = kits_df[kits_df.apply(lambda kit: include_kit(tree_df, self_kit_lineage, kit, haplogroup = haplogroup, haplogroup_max_diff = haplogroup_max_diff), axis = 1)]
+	kits_df = kits_df[kits_df.apply(lambda kit: kit_matches_lineage(tree_df, self_kit_lineage, kit, haplogroup = haplogroup, haplogroup_max_diff = haplogroup_max_diff), axis = 1)]
 	echo(f"Will compare {len(kits_df.index):,} kits.")
 
 	if tree_df is not None:

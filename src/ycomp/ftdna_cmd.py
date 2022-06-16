@@ -10,6 +10,7 @@ from pyppeteer.element_handle import ElementHandle
 from typer import *
 
 from .common import *
+from .ftdna import *
 
 
 app = Typer()
