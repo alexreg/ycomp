@@ -1,6 +1,5 @@
 import re
 import urllib.parse
-from numbers import Number
 from os import PathLike
 from pathlib import Path
 from typing import *
@@ -88,9 +87,8 @@ def add_yfull(
 	yfull_series = yfull_df["Repeats"]
 
 	# Join together multi-copy loci values.
-	new_vals: OrderedDict[list] = OrderedDict()
+	new_vals: OrderedDict[str, Optional[list]] = OrderedDict()
 	for index in yfull_series.index:
-		index: str
 		value = yfull_series[index]
 		locus, _, num = index.partition(".")
 
@@ -295,8 +293,8 @@ def analyze(
 	from decimal import Decimal
 	from statistics import NormalDist
 
-	def get_confidence_interval(confidence_level: Number) -> float:
-		return abs(NormalDist().inv_cdf((1 - confidence_level) / 2))
+	def get_confidence_interval(confidence_level: SupportsFloat) -> float:
+		return abs(NormalDist().inv_cdf((1.0 - float(confidence_level)) / 2))
 
 	rel_dist_cl = Decimal(95) / 100
 

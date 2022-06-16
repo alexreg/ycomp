@@ -83,9 +83,9 @@ def get_yfull_df(data: Union[IO, PathLike]) -> Tuple[Optional[str], List[str], p
 		if pd.isna(rating):
 			raise ValueError(f"Invalid SNP rating '{rating}'.")
 
-		rating: str = cast(str, rating)
-		if rating.strip("*") != "":
-			raise ValueError(f"Invalid SNP rating '{rating}'.")
+		rating_s: str = cast(str, rating)
+		if rating_s.strip("*") != "":
+			raise ValueError(f"Invalid SNP rating '{rating_s}'.")
 
 		return len(rating)
 
@@ -319,7 +319,7 @@ def analyze(
 
 	if snps_df is not None:
 		# Merge columns for equivalent SNPs.
-		new_cols: OrderedDict[str] = OrderedDict()
+		new_cols: OrderedDict[str, str] = OrderedDict()
 
 		def get_standard_snp_name(snp: str) -> str:
 			try:
@@ -348,7 +348,7 @@ def analyze(
 
 	echo(f"Starting analysis...")
 
-	def get_snp_list(kit_s: pd.Series) -> List[str]:
+	def get_snp_list(kit_s: pd.Series) -> str:
 		return ", ".join(kit_s[kit_s == 1].index)
 
 	self_kit_isna_s = float_isna(self_kit_s)

@@ -10,11 +10,13 @@ from typer import *
 
 _T = TypeVar("_T")
 
+GenericPath = Union[AnyStr, os.PathLike[AnyStr]]
+
 package = importlib.metadata.metadata(__package__)
 platform_dirs = PlatformDirs(appname = package["Name"], version = package["Version"])
 
 
-def first(seq: Sequence[T]) -> Optional[T]:
+def first(seq: Sequence[_T]) -> Optional[_T]:
 	return seq[0] if len(seq) > 0 else None
 
 
