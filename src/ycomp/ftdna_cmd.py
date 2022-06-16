@@ -102,7 +102,16 @@ def session() -> None:
 			username: str = shelf["username"]
 			dt: datetime = shelf["datetime"]
 			local_dt = utc_to_local(dt)
+
+			expiries = (cookie.get("expires", -1) for cookie in shelf["cookies"])
+			min_expiry = min(expiry for expiry in expiries if expiry != -1)
+			min_expiry_dt = datetime.fromtimestamp(min_expiry)
+
 			echo(f"Signed in to FTDNA with user `{username}` at {local_dt:%Y-%m-%d %H:%M:%S}.")
+			if datetime.utcnow() < min_expiry_dt:
+				secho(f"Session expires at {min_expiry_dt}.", fg = colors.GREEN)
+			else:
+				secho(f"Session expired.", fg = colors.YELLOW)
 		else:
 			echo(f"Not signed in to FTDNA.")
 
