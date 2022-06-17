@@ -265,7 +265,7 @@ def analyze(
 	self_kit: str = Option(..., "--kit", "-k", help = "The kit to compare against."),
 	snp_max_age: int = Option(3500, "--max-age", help = "The maximum age of SNPs to consider."),
 	haplogroup: Optional[str] = Option(None, "--haplogroup", help = "The haplogroup clade, to filter by."),
-	haplogroup_max_diff: Optional[int] = Option(None, "--haplogroup-max-diff", help = "The maximum difference between generations in the haplogroup tree, to filyer by."),
+	haplogroup_max_diff: Optional[int] = Option(None, "--haplogroup-max-diff", help = "The maximum difference between generations in the haplogroup tree, to filter by."),
 	output_file: Path = Option("ycomp-analysis-snp.csv", "--output", "-o", dir_okay = False, help = "The (CSV) file to write the analysis to."),
 ) -> None:
 	"""Compare matches in the SNP database."""

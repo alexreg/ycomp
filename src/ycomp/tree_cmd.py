@@ -219,7 +219,7 @@ def delete_tree() -> None:
 def hg(
 	use_snp_db: bool = Option(False, "--snp", help = "Use the local SNP database to look up kits. (default)"),
 	use_str_db: bool = Option(False, "--str", help = "Use the local STR database to look up kits."),
-	self_haplogroup: Optional[str] = Option(None, "--haplogroup", "-hg", help = "The haplogroup to look up."),
+	self_haplogroup: Optional[str] = Option(None, "--haplogroup", "--hg", help = "The haplogroup to look up."),
 	self_kit: Optional[str] = Option(None, "--kit", "-k", help = "The kit whose haplogroup to look up."),
 ) -> None:
 	"""Get information about a haplogroup in the tree."""
