@@ -297,8 +297,6 @@ def analyze(
 	if tree_df is not None:
 		relevant_snps = get_relevant_snps(tree_df, max_age = snp_max_age)
 		echo(f"Found {len(relevant_snps):,} relevant SNPs in tree.")
-		# irrelevant_snps = get_irrelevant_snps(tree_df, max_age = max_age)
-		# echo(f"Found {len(irrelevant_snps):,} irrelevant SNPs in tree.")
 	else:
 		irrelevant_snps = None # all SNPs
 

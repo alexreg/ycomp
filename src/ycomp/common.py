@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import *
 
+import mechanicalsoup
 from platformdirs import PlatformDirs
 from typer import *
 
@@ -32,3 +33,15 @@ def cache_dir() -> Path:
 	path = Path(platform_dirs.user_cache_dir)
 	path.mkdir(parents = True, exist_ok = True)
 	return path
+
+
+def _form_choose_submit_none(form: mechanicalsoup.Form):
+	buttons = (button for button in form.form.select("input[type='submit' i], button") if button.get("type", "").lower() not in ("button", "reset"))
+
+	for button in buttons:
+		del button["name"]
+
+	form._submit_chosen = True
+
+
+mechanicalsoup.Form.choose_submit_none = _form_choose_submit_none
