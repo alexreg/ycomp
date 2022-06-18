@@ -12,6 +12,17 @@ app = Typer()
 
 
 @app.command()
+def refresh() -> None:
+	"""Refresh the signed-in FTDNA session."""
+
+	with open_ftdna_login_cache() as shelf:
+		if "cookies" in shelf:
+			cookies = ftdna_refresh(shelf.get("cookies"), http_timeout = 10)
+			if cookies is not None:
+				shelf["cookies"] = cookies
+
+
+@app.command()
 def session() -> None:
 	"""Show information about signed-in FTDNA session."""
 

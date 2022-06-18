@@ -183,6 +183,40 @@ def ftdna_fetch_kits(url: str, *, page_size: Optional[int] = None, http_timeout:
 	return kits_df
 
 
+def ftdna_refresh(cookies: Optional[Cookies], *, http_timeout: float) -> Optional[Cookies]:
+	echo(f"Refreshing FTDNA session...")
+
+	ftdna_refresh_url = "https://www.familytreedna.com"
+
+	async def run() -> None:
+		browser = await pyppeteer.launch(headless = True, timeout = http_timeout * 1000)
+
+		page = await browser.newPage()
+
+		if cookies is not None:
+			await page.setCookie(*cookies)
+
+		response = await page.goto(ftdna_refresh_url, waitUntil = "networkidle0")
+
+		if response.ok:
+			new_cookies = await page.cookies()
+		else:
+			new_cookies = None
+
+		await browser.close()
+
+		return new_cookies
+
+	new_cookies = asyncio.get_event_loop().run_until_complete(run())
+
+	if new_cookies:
+		echo(f"Successfully refreshed FTDNA session.")
+	else:
+		secho(f"Error refreshing FTDNA session.", fg = colors.RED, err = True)
+
+	return new_cookies
+
+
 def ftdna_signin(username: str, password: str, *, http_timeout: float) -> Optional[Cookies]:
 	echo(f"Signing in to FTDNA with user `{username}`...")
 
@@ -219,7 +253,8 @@ def ftdna_signin(username: str, password: str, *, http_timeout: float) -> Option
 		for task in done:
 			await task
 
-		if wait_for_navigation in done:
+		response = await wait_for_navigation
+		if wait_for_navigation in done and response.ok:
 			cookies = await page.cookies()
 		else:
 			cookies = None
