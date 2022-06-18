@@ -135,10 +135,10 @@ def add_yfull(
 	info_df = pd.DataFrame(
 		{
 			"Kit Number": pd.Series(kit, dtype = "str"),
-			"Group": pd.Series(group, dtype = "str"),
-			"Paternal Ancestor Name": pd.Series(ancestor, dtype = "str"),
-			"Country": pd.Series(country, dtype = "str"),
-			"Haplogroup": pd.Series(haplogroup or yfull_haplogroup, dtype = "str"),
+			"Group": pd.Series(group, dtype = "string"),
+			"Paternal Ancestor Name": pd.Series(ancestor, dtype = "string"),
+			"Country": pd.Series(country, dtype = "string"),
+			"Haplogroup": pd.Series(haplogroup or yfull_haplogroup, dtype = "string"),
 		}
 	)
 	info_df.set_index("Kit Number", inplace = True)
@@ -183,10 +183,10 @@ def fetch_ftdna(
 	kits_df.set_index("Kit Number", inplace = True)
 	kits_df.index = kits_df.index.astype("str")
 	if "Paternal Ancestor Name" in kits_df:
-		kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].astype("str")
+		kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].astype("string")
 	else:
-		kits_df["Paternal Ancestor Name"] = pd.Series(np.nan, index = kits_df.index, dtype = "str")
-	kits_df["Haplogroup"] = kits_df["Haplogroup"].astype("str")
+		kits_df["Paternal Ancestor Name"] = pd.Series(np.nan, index = kits_df.index, dtype = "string")
+	kits_df["Haplogroup"] = kits_df["Haplogroup"].astype("string")
 
 	def expand_row(row: Any) -> pd.Series:
 		def get_snp_value(call: str) -> Optional[Tuple[str, bool]]:
@@ -213,9 +213,9 @@ def fetch_ftdna(
 
 	kits_df = pd.concat(
 		[
-			pd.Series(np.nan, index = kits_df.index, dtype = "str", name = "Group"),
+			pd.Series(np.nan, index = kits_df.index, dtype = "string", name = "Group"),
 			kits_df["Paternal Ancestor Name"],
-			pd.Series(np.nan, index = kits_df.index, dtype = "str", name = "Country"),
+			pd.Series(np.nan, index = kits_df.index, dtype = "string", name = "Country"),
 			kits_df["Haplogroup"],
 			expanded_rows,
 		],
@@ -234,29 +234,28 @@ def merge_str_db() -> None:
 
 	from . import str_cmd
 
-	kits_df = load_db(kits_snp_path)
-	if kits_df is None:
+	kits_snp_df = load_db(kits_snp_path)
+	if kits_snp_df is None:
 		secho(f"ERROR: Kits SNP database does not exist.", fg = colors.RED, err = True)
 		raise Exit(1)
 
-	echo(f"Found {len(kits_df):,} kits in SNP database.")
+	echo(f"Found {len(kits_snp_df):,} kits in Kits SNP database.")
 
 	kits_str_df = load_db(str_cmd.kits_str_path)
 	if kits_str_df is None:
 		secho(f"ERROR: Kits STR database does not exist.", fg = colors.RED, err = True)
 		raise Exit(1)
 
-	echo(f"Found {len(kits_df):,} kits in STR database.")
-
-	str_data_df = kits_str_df[["Group", "Paternal Ancestor Name", "Country", "Haplogroup"]]
+	echo(f"Found {len(kits_snp_df):,} kits in Kits STR database.")
 
 	echo("Merging STR metadata into SNP metadata...")
 
-	kits_df.update(str_data_df)
+	str_data_df = kits_str_df[["Group", "Paternal Ancestor Name", "Country", "Haplogroup"]]
+	kits_snp_df.update(str_data_df)
 
 	echo("Finished merging.")
 
-	merge_db(kits_snp_path, kits_df)
+	merge_db(kits_snp_path, kits_snp_df)
 	echo(f"Kits SNP database written to `{kits_snp_path}`.")
 
 
@@ -275,7 +274,7 @@ def analyze(
 		secho(f"ERROR: Kits SNP database does not exist.", fg = colors.RED, err = True)
 		raise Exit(1)
 
-	echo(f"Found {len(kits_df):,} kits in SNP database.")
+	echo(f"Found {len(kits_df):,} kits in Kits SNP database.")
 
 	snps_df = load_db(snps_path)
 	if snps_df is None:

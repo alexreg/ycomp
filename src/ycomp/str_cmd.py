@@ -76,10 +76,10 @@ def add_yfull(
 	info_df = pd.DataFrame(
 		{
 			"Kit Number": pd.Series(kit, dtype = "str"),
-			"Group": pd.Series(group, dtype = "str"),
-			"Paternal Ancestor Name": pd.Series(ancestor, dtype = "str"),
-			"Country": pd.Series(country, dtype = "str"),
-			"Haplogroup": pd.Series(haplogroup, dtype = "str"),
+			"Group": pd.Series(group, dtype = "string"),
+			"Paternal Ancestor Name": pd.Series(ancestor, dtype = "string"),
+			"Country": pd.Series(country, dtype = "string"),
+			"Haplogroup": pd.Series(haplogroup, dtype = "string"),
 		}
 	)
 	info_df.set_index("Kit Number", inplace = True)
@@ -142,11 +142,11 @@ def fetch_ftdna(
 	kits_df.set_index("Kit Number", inplace = True)
 	kits_df.index = kits_df.index.astype("str")
 	if "Paternal Ancestor Name" in kits_df:
-		kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].astype("str")
+		kits_df["Paternal Ancestor Name"] = kits_df["Paternal Ancestor Name"].astype("string")
 	else:
-		kits_df["Paternal Ancestor Name"] = pd.Series(np.nan, index = kits_df.index, dtype = "str")
-	kits_df["Country"] = kits_df["Country"].astype("str")
-	kits_df["Haplogroup"] = kits_df["Haplogroup"].astype("str")
+		kits_df["Paternal Ancestor Name"] = pd.Series(np.nan, index = kits_df.index, dtype = "string")
+	kits_df["Country"] = kits_df["Country"].astype("string")
+	kits_df["Haplogroup"] = kits_df["Haplogroup"].astype("string")
 
 	group = None
 	def get_group(kit_s: pd.Series) -> pd.Series:
@@ -201,7 +201,7 @@ def analyze(
 		secho(f"ERROR: Kits STR database does not exist.", fg = colors.RED, err = True)
 		raise Exit(1)
 
-	echo(f"Found {len(kits_df):,} kits in STR database.")
+	echo(f"Found {len(kits_df):,} kits in Kits STR database.")
 
 	snps_df = load_db(snps_path)
 	if snps_df is None:
@@ -231,8 +231,6 @@ def analyze(
 		raise Exit(1)
 
 	echo(f"Starting analysis...")
-
-	total_num_loci = kits_df.shape[1]
 
 	def get_abs_diffs(kit_s: pd.Series) -> pd.Series:
 		def get_diff(a: List[int], b: List[int]) -> List[int]:
@@ -290,6 +288,7 @@ def analyze(
 	rel_dist_cl = Decimal(95) / 100
 
 	loci_diffs = kits_loci_df.apply(lambda kit_s: get_abs_diffs(kit_s), axis = 1)
+	total_num_loci = loci_diffs.shape[1]
 	num_comps = loci_diffs.count(axis = 1)
 	abs_dists = loci_diffs.sum(axis = 1)
 	rel_dists = loci_diffs.mean(axis = 1)
