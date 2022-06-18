@@ -123,7 +123,7 @@ def add_yfull(
 	haplogroup: Optional[str] = Option(None, "--haplogroup", help = "The haplogroup of the sample."),
 	file: Path = Argument(..., exists = True, dir_okay = False, help = "The YFull SNP file for the kit."),
 ) -> None:
-	"""Add a YFull kit to the SNP database."""
+	"""Add a YFull kit to the Kits SNP database."""
 
 	if kit is None:
 		match = re.fullmatch(r"SNP_for_(YF\d+)_(\d+)", file.stem)
@@ -152,6 +152,59 @@ def add_yfull(
 	echo(f"Added kit {kit}.")
 
 	merge_db(kits_snp_path, kit_df)
+	echo(f"Kits SNP database written to `{kits_snp_path}`.")
+
+
+@app.command()
+def remove(
+	kit: Optional[str] = Option(None, "--kit", "-k", help = "The kit number."),
+	group: Optional[str] = Option(None, "--group", help = "The group within which the sample clusters."),
+	ancestor: Optional[str] = Option(None, "--ancestor", help = "The earliest known patrilineal ancestor."),
+	country: Optional[str] = Option(None, "--country", help = "The country from which the ancestor came."),
+	haplogroup: Optional[str] = Option(None, "--haplogroup", help = "The haplogroup of the sample."),
+) -> None:
+	"""Remove kit(s) from the Kits SNP database."""
+
+	kits_df = load_db(kits_snp_path)
+	if kits_df is None:
+		secho(f"ERROR: Kits SNP database does not exist.", fg = colors.RED, err = True)
+		raise Exit(1)
+
+	orig_num_kits = len(kits_df)
+
+	echo(f"Found {orig_num_kits:,} kits in Kits SNP database.")
+
+	kits_filter = pd.Series(True, index = kits_df.index, dtype = "bool")
+
+	if kit is not None:
+		kits_filter &= kits_df.index.str.fullmatch(kit)
+
+	if group is not None:
+		kits_filter &= kits_df["Group"].str.fullmatch(group)
+
+	if ancestor is not None:
+		kits_filter &= kits_df["Ancestor"].str.fullmatch(ancestor)
+
+	if country is not None:
+		kits_filter &= kits_df["Country"].str.fullmatch(country)
+
+	if haplogroup is not None:
+		kits_filter &= kits_df["Haplogroup"].str.fullmatch(haplogroup)
+
+	kits_to_remove = kits_filter.sum()
+	echo(f"Found {kits_to_remove} kit(s) to remove.")
+	kits_df = kits_df[~kits_filter]
+
+	if kits_to_remove == 0:
+		return
+
+	echo(f"Will be {len(kits_df):,} kits in Kits SNP database.")
+
+	if not confirm("Proceed?"):
+		secho("Not writing kits to database.", fg = colors.YELLOW)
+		return
+
+	store_db(kits_snp_path, kits_df)
 	echo(f"Kits SNP database written to `{kits_snp_path}`.")
 
 
@@ -267,7 +320,7 @@ def analyze(
 	haplogroup_max_diff: Optional[int] = Option(None, "--haplogroup-max-diff", help = "The maximum difference between generations in the haplogroup tree, to filter by."),
 	output_file: Path = Option("ycomp-analysis-snp.csv", "--output", "-o", dir_okay = False, help = "The (CSV) file to write the analysis to."),
 ) -> None:
-	"""Compare matches in the SNP database."""
+	"""Compare matches in the Kits SNP database."""
 
 	kits_df = load_db(kits_snp_path)
 	if kits_df is None:
