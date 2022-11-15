@@ -2,7 +2,7 @@ from datetime import datetime
 from sre_parse import State
 from typing import *
 
-from typer import *
+from typer_cloup import *
 
 from .common import *
 from .ftdna import *

@@ -6,7 +6,7 @@ from typing import *
 
 import mechanicalsoup
 from platformdirs import PlatformDirs
-from typer import *
+from typer_cloup import *
 
 
 _T = TypeVar("_T")

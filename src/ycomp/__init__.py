@@ -2,7 +2,7 @@ from typing import *
 
 import pandas as pd
 from click.exceptions import ClickException
-from typer import *
+from typer_cloup import *
 
 from . import common, ftdna_cmd, snp_cmd, str_cmd, tree_cmd
 
@@ -12,10 +12,10 @@ app = Typer(
 		"help_option_names": ["-h", "--help"],
 	},
 )
-app.add_typer(ftdna_cmd.app)
-app.add_typer(tree_cmd.app)
-app.add_typer(snp_cmd.app)
-app.add_typer(str_cmd.app)
+app.add_sub(ftdna_cmd.app)
+app.add_sub(tree_cmd.app)
+app.add_sub(snp_cmd.app)
+app.add_sub(str_cmd.app)
 
 pd.options.mode.chained_assignment = None
 
@@ -52,7 +52,7 @@ def main() -> int:
 	import logging
 	import os
 
-	import typer
+	import typer_cloup as typer
 
 	try:
 		logging.basicConfig(level = os.environ.get("LOGLEVEL", "WARNING").upper())

@@ -7,7 +7,7 @@ from typing import *
 import numpy as np
 import pandas as pd
 from more_itertools import distinct_combinations, flatten
-from typer import *
+from typer_cloup import *
 
 from .common import *
 from .db import *
