@@ -8,9 +8,9 @@ from . import common, ftdna_cmd, snp_cmd, str_cmd, tree_cmd
 
 
 app = Typer(
-	context_settings = {
-		"help_option_names": ["-h", "--help"],
-	},
+    context_settings={
+        "help_option_names": ["-h", "--help"],
+    },
 )
 app.add_sub(ftdna_cmd.app)
 app.add_sub(tree_cmd.app)
@@ -22,53 +22,53 @@ pd.options.mode.chained_assignment = None
 
 @ftdna_cmd.app.callback()
 def ftdna() -> None:
-	"""Work with FTDNA accounts."""
+    """Work with FTDNA accounts."""
 
-	pass
+    pass
 
 
 @tree_cmd.app.callback()
 def tree() -> None:
-	"""Work with haplogroup tree data."""
+    """Work with haplogroup tree data."""
 
-	pass
+    pass
 
 
 @snp_cmd.app.callback()
 def snp() -> None:
-	"""Work with SNP data."""
+    """Work with SNP data."""
 
-	pass
+    pass
 
 
 @str_cmd.app.callback("str")
 def str_() -> None:
-	"""Work with STR data."""
+    """Work with STR data."""
 
-	pass
+    pass
 
 
 def main() -> int:
-	import logging
-	import os
+    import logging
+    import os
 
-	import typer_cloup as typer
+    import typer_cloup as typer
 
-	try:
-		logging.basicConfig(level = os.environ.get("LOGLEVEL", "WARNING").upper())
+    try:
+        logging.basicConfig(level=os.environ.get("LOGLEVEL", "WARNING").upper())
 
-		command = typer.main.get_command(app)
-		result = command(standalone_mode = False)
-		return result
-	except Abort:
-		secho(f"aborted", fg = colors.RED, err = True)
-		return 1
-	except ClickException as e:
-		secho(e, fg = colors.RED, err = True)
-		return 1
-	except Exception as e:
-		if common.debug_mode():
-			raise
-		else:
-			secho(f"UNEXPECTED ERROR: {e}", fg = colors.RED, err = True)
-			return 1
+        command = typer.main.get_command(app)
+        result = command(standalone_mode=False)
+        return result
+    except Abort:
+        secho(f"aborted", fg=colors.RED, err=True)
+        return 1
+    except ClickException as e:
+        secho(e, fg=colors.RED, err=True)
+        return 1
+    except Exception as e:
+        if common.debug_mode():
+            raise
+        else:
+            secho(f"UNEXPECTED ERROR: {e}", fg=colors.RED, err=True)
+            return 1
