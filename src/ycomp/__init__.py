@@ -48,7 +48,7 @@ def str_() -> None:
     pass
 
 
-def main() -> int:
+def main() -> Any:
     import logging
     import os
 
@@ -58,8 +58,7 @@ def main() -> int:
         logging.basicConfig(level=os.environ.get("LOGLEVEL", "WARNING").upper())
 
         command = typer.main.get_command(app)
-        result = command(standalone_mode=False)
-        return result
+        return command(standalone_mode=False)
     except Abort:
         secho(f"aborted", fg=colors.RED, err=True)
         return 1
